@@ -3,8 +3,7 @@
 from math import exp, sin, cos
 
 # Метод прогонки
-def progonka(n,c,a,b,f):
-    x = [0 for i in range(n)]
+def progonka(n,c,a,b,f,x):
     alpha = [0 for i in range(n)]
     beta = [0 for i in range(n)]
     
@@ -18,8 +17,6 @@ def progonka(n,c,a,b,f):
     x[n-1] = (f[n-1] + beta[n-2]*a[n-1])/(c[n-1] - alpha[n-2]*a[n-1]) 
     for i in range(n-2,-1,-1):
         x[i] = alpha[i]*x[i+1] + beta[i]
-    
-    return x
 
 # Параметры задачи
 
@@ -72,6 +69,60 @@ for j in range(M):
     #в следующей строке где-то ошибка!
     y[0][j+1] = (h*(beta_1(tau*(j+1))+h/2*phi[0][j+1]+h/(2*tau)*y[0][j])-y[1][j+1])/(-1-alpha_1*h+h**2/(2*tau))
     y[N][j+1] = y[N-1][j+1] + h*(alpha_2*y[N-1][j+1]+beta_2(tau*(j+1))+h/2*(phi[N-1][j+1]-1/tau*(y[N-1][j+1]-y[N-1][j])))
+
+# for j in range(M+1):
+    # for i in range(N+1):
+        # print(y[i][j])
+        # print(u(h*i,tau*j))
+    # print("\n")
+print("1")
+
+# sigma = 1/2, неявная схема
+
+# Параметры сетки
+h = 0.25
+tau = 0.05
+N = int(L/h)
+M = int(T/tau)
+
+# Задаем нужные функции на сетке
+phi = [[f(h*i, tau*j) for j in range(M+1)] for i in range(1,N+1)]
+y = [[0 for j in range(M+1)] for i in range(N+1)]
+
+# Инициализируем нулевой слой
+for i in range(N+1):
+    y[i][0] = u_0(h*i)
+
+# Решение систем методом прогонки для каждого j+1
+for j in range(M):
+    # Готовим систему для метода прогонки
+    c = [0 for i in range(N+1)]
+    a = [0 for i in range(N+1)]
+    b = [0 for i in range(N+1)]
+    f = [0 for i in range(N+1)]
+    a[0] = 0
+    c[0] = -1/h-alpha_1+h/(2*tau)
+    b[0] = -1/h
+    f[0] = beta_1(tau*(j+1))+h/2*phi[0][j+1]+h/(2*tau)*y[0][j]
+    for i in range(1,N):
+        a[i] = 1/(2*h**2)
+        c[i] = 1/tau+1/(h**2)
+        b[i] = 1/(2*h**2)
+        f[i] = y[i][j]/tau+(y[i+1][j]-2*y[i][j]+y[i-1][j])/(2*h**2)
+    a[N] = 1/h+alpha_2-h/(2*tau)
+    c[N] = 1/h
+    b[N] = 0
+    f[N] = beta_2(tau*(j+1))+h/2*phi[N-1][j+1]+h/(2*tau)*y[N-1][j]
+    # Решаем систему методом прогонки
+    # Тут что-то не так с индексацией, приходится делать финт
+    pr = [0 for i in range(N+1)]
+    progonka(N+1,c,a,b,f,pr)
+    for i in range(N+1):
+        y[i][j+1] = pr[i]
+    
+    # тут с решением все получилось хорошо, приближенное близко к истинному
+
+print("2")
 
 for j in range(M+1):
     for i in range(N+1):
