@@ -1,0 +1,647 @@
+﻿\input{Lab_Preamble}
+
+\begin{document}
+
+\input{TitlePage_lab01}
+
+\chapter{Постановка задачи}
+Построить и реализовать разностную схему для уравнения теплопроводности (третья краевая задача) с весами $\sigma=0$, $\sigma=\frac{1}{2}$, $\sigma=1$ с порядком аппроксимации $O(\tau+h^2)$ (повысить порядок аппроксимации краевых условий).\par
+Шаги сетки выбрать из условий устойчивости разностной схемы:
+\begin{tabular}{cc}
+$\sigma=0$ & $\tau \le \frac{h^{2}}{2}$ \\
+$\sigma=\frac{1}{2}$ & $\tau \le h^{2}$ \\
+$\sigma=\frac{1}{2}$ & $\tau \le h^{2}$
+\end{tabular} \par
+Отрезок интегрирования $0 \le \tau \le 1$ (для $\sigma=0$, $\tau = 0.1$). \par
+Вывод результатов в одной таблице (каждый 20-й слой).
+
+\chapter{Описание алгоритмов}
+\section{Общая постановка задачи и построение разностной схемы}
+Ищем приближенное решение для задачи вида:
+\begin{equation}
+\left\{
+\begin{array}{ll}
+\frac{\partial u}{\partial t}=\frac{\partial^{2} u}{\partial x^{2}}+f(x,t), & 0<x<1, 0<t\le T, \\
+u(x,0)=u_{0}(x), & 0\le x \le 1, \\
+\frac{\partial u}{\partial x}(0,t)=\alpha_{1}u(0,t)+\beta_{1}(t), & 0 \le t \le T, \\
+\frac{\partial u}{\partial x}(1,t)=\alpha_{2}u(1,t)+\beta_{2}(t), & 0 \le t \le T.
+\end{array}
+\right.
+\end{equation}
+
+Построим эту задачу при $u(x,t)=e^{-t}(\sin x + \cos x)$.
+\begin{eqnarray*}
+& \frac{\partial u}{\partial t}=-e^{-t}(\sin x + \cos x) \\
+& \frac{\partial u}{\partial x}=e^{-t}(\cos x - \sin x) \\
+& \frac{\partial^{2} u}{\partial x^{2}}=e^{-t}(-\sin x - \cos x) \\
+& f(x,t)=\frac{\partial u}{\partial t}-\frac{\partial^{2} u}{\partial x^{2}}=e^{-t}(-\sin x - \cos x + \sin x + \cos x)=0 \\
+& u_{0}(x)=\sin x + \cos x
+\end{eqnarray*}
+
+
+%
+%
+%Общий вид уравнения:
+%\begin{equation}\label{eq:eq1}
+%\ u(x)-\lambda\int_a^bK(x,s)u(s)ds = f(x)
+%\end{equation}
+%На отрезке $[a;b]$ выбираем $n+1$ узел по правилу
+%\begin{equation*}
+%\ h=\frac{b-a}{n}, x_k=a+hk, k=\overline{0,n}
+%\end{equation*}
+%По этим узлам строим КФ, которой заменяем интеграл и получаем:
+%\begin{equation}\label{eq:eq2}
+%\ u(x)-\lambda\sum_{k=0}^{n}A_kK(x,x_k)u(x_k) = f(x)
+%\end{equation}
+%Обозначив $y_k=u(x_k)$, приходим у СЛАУ относительно $y_i$:
+%\begin{equation}\label{eq:eq3}
+%\ y_i-\lambda\sum_{k=0}^{n}A_kK(x_i,x_k)y_k = f(x_i), i=\overline{0,n}
+%\end{equation}
+%Решив эту СЛАУ, восстанавливаем решение исходной задачи в виде
+%\begin{equation}\label{eq:eq4}
+%\ u(x)= f(x)+\lambda\sum_{k=0}^{n}A_kK(x,x_k)y_k
+%\end{equation}
+%\par
+%Если в качестве КФ используем формулу трапеций, то $A_0=A_n=\frac{h}{2}, A_k=h, k=\overline{1,n-1}$ \par
+%Если в качестве КФ используем формулу Симпсона, то $A_0=A_n=\frac{h}{3}, A_{2k}=\frac{2h}{3}, A_{2k-1}=\frac{4h}{3}, k=\overline{1,[\frac{n}{2}]}$
+%
+%\section{Метод механических квадратур для решения ИУ Вольтерра 2-го рода}
+%Общий вид уравнения:
+%\begin{equation}\label{eq:eq5}
+%\ u(x)-\lambda\int_a^xK(x,s)u(s)ds = f(x), x\in[a;b]
+%\end{equation}
+%При помощи аналогичных рассуждений получаем СЛАУ относительно $y_i$:
+%\begin{equation}\label{eq:eq6}
+%\ y_i-\lambda\sum_{k=0}^{i}A_kK(x_i,x_k)y_k = f(x_i), i=\overline{0,n}
+%\end{equation}
+%(заметим, что для решения этой СЛАУ остаточно выполнить только обратный ход метода Гаусса, так как она уже имеет нижнетреугольный вид). В остальном алгортмы совпадают.
+%
+%\section{Метод замены ядра на вырожденное для решения ИУ Фредгольма 2-го рода}
+%Метод применяется только к ИУ Фредгольма 2-го рода. \par
+%Пусть имеется уравнение вида ~\eqref{eq:eq1}. Представляем ядро оператора Фредгольма $K(x,y)$ в виде
+%\begin{equation}\label{eq:eq7}
+%\ K(x,y)=\sum_{i=0}^n\alpha_i(x)\beta_i(y)
+%\end{equation}
+%где $\alpha_i(x), \beta_i(y), i=\overline{0,n}$ - коэффициенты в разложении функции $K(x,y)$, полученные каким-либо способом (разожение в ряд Тейлора по одной из переменных, по обеим, разложение в ряд Фурье, интерполирование, метод Бэтмена).
+%При помощи такой замены сразу же приходим к алгоритму:
+%\begin{equation}\label{eq:eq8}
+%\ u(x)= f(x)+\lambda\sum_{i=0}^{n}c_i\alpha_i(x)
+%\end{equation}
+%где $c_i$ - это решение СЛАУ
+%\begin{equation}\label{eq:eq9}
+%\ c_i=\int_a^b\beta_i(s)f(s)ds+\lambda\sum_{j=0}^nc_j\int_a^b\beta_i(s)\alpha_j(s)ds, i=\overline{0,n}
+%\end{equation}
+%
+%\chapter{Полученные результаты}
+%\section{ММК для ИУ Фредгольма 2-го рода, используя формулу трапеций}
+%Приближенное решение:
+%\begin{eqnarray*}
+%\ u(x)=f(x)+\lambda*0.15708*K(x,0)*2+ 0.314159*K(x,0.314159)*3.15999+ \\ +0.314159*K(x,0.628319)*5.38522+ 0.314159*K(x,0.942478)*8.5126+ \\ +0.314159*K(x,1.25664)*11.8694+ 0.314159*K(x,1.5708)*14.1561+ \\ +0.314159*K(x,1.88496)*14.3886+ 0.314159*K(x,2.19911)*13.9291+ \\ +0.314159*K(x,2.51327)*16.4773+ 0.314159*K(x,2.82743)*22.9691
+%\end{eqnarray*}
+%График полученного приближенного решения: \par
+%%\includegraphics[width=10cm, keepaspectratio]{Lab5_MMK_Fredholm_Trapeze.png}
+%
+%\section{ММК для ИУ Фредгольма 2-го рода, используя формулу Симпсона}
+%Приближенное решение:
+%\begin{eqnarray*}
+%\ u(x)=f(x)+\lambda*0.10472*K(x,0)*2+ 0.418879*K(x,0.314159)*3.1531+ \\ +0.20944*K(x,0.628319)*5.35899+ 0.418879*K(x,0.942478)*8.46566+ \\ +0.20944*K(x,1.25664)*11.8347+ 0.418879*K(x,1.5708)*14.2053+ \\ +0.20944*K(x,1.88496)*14.5356+ 0.418879*K(x,2.19911)*13.9709+ \\ +0.20944*K(x,2.51327)*16.2136+ 0.418879*K(x,2.82743)*22.8794
+%\end{eqnarray*}
+%График полученного приближенного решения: \par
+%%\includegraphics[width=10cm, keepaspectratio]{Lab5_MMK_Fredholm_Simpson.png}
+%
+%\section{Метод замены ядра на вырожденное для ИУ Фредгольма 2-го рода}
+%Для замены на вырожденное используем интерполирование ядра $K(x,y)=sin\frac{x^2y^2}{10}$ по переменной $x$.
+%Подставляем функцию из условия, находим коэффициенты в разложении:
+%\begin{equation*}
+%\begin{aligned}
+%\alpha_0(x)=\frac{(x-\frac{\pi}{3})(x-\frac{2\pi}{3})(x-\pi)}{(0-\frac{\pi}{3})(0-\frac{2\pi}{3})(0-\pi)} \\
+%\alpha_1(x)=\frac{x(x-\frac{2\pi}{3})(x-\pi)}{\frac{\pi}{3}(\frac{\pi}{3}-\frac{2\pi}{3})(\frac{\pi}{3}-\pi)} \\
+%\alpha_2(x)=\frac{x(x-\frac{\pi}{3})(x-\pi)}{\frac{2\pi}{3}(\frac{2\pi}{3}-\frac{\pi}{3})(\frac{2\pi}{3}-\pi)} \\
+%\alpha_3(x)=\frac{x(x-\frac{\pi}{3})(x-\frac{2\pi}{3})}{\pi(\pi-\frac{\pi}{3})(\pi-\frac{2\pi}{3})} \\
+%\beta_0(y)=K(0,y) \\
+%\beta_1(y)=K(\frac{\pi}{3},y) \\
+%\beta_2(y)=K(\frac{2\pi}{3},y) \\
+%\beta_3(y)=K(\pi,y) \\
+%\end{aligned}
+%\end{equation*}
+%Считаем интегралы и получаем СЛАУ относительно коэффициентов $c_i$, решаем ее. Приближенное решение будет иметь вид:
+%\begin{eqnarray*}
+%\ u(x)=f(x)+\lambda(0\alpha_0(x)+55.8958\alpha_1(x)- \\
+%-40.0692\alpha_2(x)-38.8226\alpha_3(x)
+%\end{eqnarray*}
+%График полученного приближенного решения: \par
+%%\includegraphics[width=10cm, keepaspectratio]{Lab5_MMK_Fredholm_Degenerate.png}
+%
+%\section{Сравнение результатов применения различных методов к ИУ Фредгольма 2-го рода}
+%В таблице содержатся значения в узлах интерполирования, полученные при помощи различных методов (ММК с формулой трапеций(ММКТ), ММК с формулой Симпсона(ММКС), метод замены ядра на вырожденное(ЗЯВ)): \par
+%\begin{tabular}{lccr}
+%Узел &ММКТ &ММКС &ЗЯВ \\
+%0 &2 &2 &2 \\
+%0.314159 &3.15999 &3.1531 &14.5668 \\
+%0.628319 &5.38522 &5.35899 &19.93 \\
+%0.942478 &8.5126 &8.46566 &19.8212 \\
+%1.25664 &11.8694 &11.8347 &15.9906 \\
+%1.5708 &14.1561 &14.2053 &10.2135 \\
+%1.88496 &14.3886 &14.5356 &4.30033 \\
+%2.19911 &13.9291 &13.9709 &0.108966 \\
+%2.51327 &16.4773 &16.2136 &-0.437435 \\
+%2.82743 &22.9691 &22.8794 &4.67356
+%\end{tabular} \par
+%Таким образом, погрешность метода замены ядра на вырожденное получается очень большой (из-за вида ядра, которое, по сути, представляет собой неберущийся интеграл). В данном случае использовать этот метод крайне неэффективно
+%
+%\section{ММК для ИУ Вольтерра 2-го рода, используя формулу трапеций}
+%Приближенное решение:
+%\begin{eqnarray*}
+%\ u(x)=f(x)+\lambda*0.05*K(x,0)*2+ 0.1*K(x,0.1)*2.65637+ 0.1*K(x,0.2)*3.49374+ \\ +0.1*K(x,0.3)*4.80492+ 0.1*K(x,0.4)*6.96753+ 0.1*K(x,0.5)*10.7857+ \\ +0.1*K(x,0.6)*18.1602+ 0.1*K(x,0.7)*34.233+ 0.1*K(x,0.8)*75.688+ \\ +0.1*K(x,0.9)*212.94
+%\end{eqnarray*}
+%Значения в узлах интерполирования: \par
+%\begin{tabular}{lcr}
+%Узел &Значение \\
+%0 &136.564 \\
+%0.1 &150.937 \\
+%0.2 &166.849 \\
+%0.3 &184.464 \\
+%0.4 &203.971 \\
+%0.5 &225.577 \\
+%0.6 &249.511 \\
+%0.7 &276.034 \\
+%0.8 &305.43 \\
+%0.9 &338.023
+%\end{tabular} \par
+%График полученного приближенного решения: \par
+%%\includegraphics[width=10cm, keepaspectratio]{Lab5_MMK_Volterr_Trapeze.png}
+%
+%\chapter{Листинг программы}
+%\begin{verbatim}
+%/*
+% * main.cpp
+% *
+% *  Created on: 10.04.2013
+% *      Author: HR
+% */
+%
+%#include <iostream>
+%#include <math.h>
+%
+%using namespace std;
+%
+%void straightGaussianElimination (double ** A, double * b, int size)
+%{
+%	double c;
+%	double d;
+%
+%	// partial pivoting
+%	for (int i = size-1; i > 0; i--)
+%    {
+%        if ( A[i-1][0] < A[i][0] )
+%		{
+%            for( int j = 0; j < size; j++ )
+%            {
+%                c = A[i][j];
+%                A[i][j] = A[i-1][j];
+%                A[i-1][j] = c;
+%            }
+%			d = b[i];
+%			b[i] = b[i-1];
+%			b[i-1] = d;
+%		}
+%    }
+%
+%	for ( int k = 0; k < size; k++ )
+%	{
+%		c = A[k][k];
+%		A[k][k] = 1;
+%		b[k] = b[k]/c;
+%		for ( int j = k+1; j < size; j++ )
+%		{
+%			A[k][j] = A[k][j] / c;
+%		}
+%		for (int i = k+1; i < size; i++)
+%		{
+%			for (int j = k+1; j < size; j++)
+%			{
+%				A[i][j] = A[i][j] - A[i][k]*A[k][j];
+%			}
+%			b[i] = b[i] - A[i][k]*b[k];
+%		}
+%	}
+%	b[size-1] = b[size-1]/A[size-1][size-1];
+%}
+%
+%void inverseGaussianElimination (double * result, double ** A, double * b, int size)
+%{
+%	result[size-1] = b[size-1];
+%	for (int i = size-2; i >= 0; i--)
+%	{
+%		double sum = 0;
+%		for (int j = i+1; j < size; j++)
+%		{
+%			sum = sum + A[i][j]*result[j];
+%		}
+%		result[i] = b[i] - sum;
+%	}
+%}
+%
+%void GaussianElimination (double * result, double ** A, double * b, int size)
+%{
+%	straightGaussianElimination ( A, b, size );
+%	inverseGaussianElimination ( result, A, b, size );
+%}
+%
+%void lowerTriangularGaussianElimination (double * result, double ** A, double * b, int size)
+%{
+%	result[0] = b[0];
+%	for (int i = 1; i < size; i++)
+%	{
+%		double sum = 0;
+%		for (int j = 0; j < i; j++)
+%		{
+%			sum = sum + A[i][j]*result[j];
+%		}
+%		result[i] = (b[i] - sum)/A[i][i];
+%	}
+%}
+%
+%double K_Fredholm(double x, double y)
+%{
+%	return sin(pow(x*y, 2)/10);
+%}
+%
+%double f_Fredholm(double x)
+%{
+%	return 1+x+exp(x);
+%}
+%
+%double K_Volterr(double x, double y)
+%{
+%	return exp(x+y);
+%}
+%
+%double f_Volterr(double x)
+%{
+%	return 1+exp(2*x);
+%}
+%
+%double MMKFredholmTrapeze(double x)
+%{
+%	//number of nodes
+%	int n = 10;
+%	//equation input
+%	double a = 0;
+%	double b = M_PI;
+%	double lambda = 0.25;
+%	double (*f)(double) = f_Fredholm;
+%	double (*K)(double, double) = K_Fredholm;
+%
+%	//coefficients for Trapeze SF
+%	double h = (a+b)/n;
+%	double *A = new double[n+1];
+%	A[0] = A[n] = h/2;
+%	for (int i = 1; i < n; i++) //from second to the pre-last
+%	{
+%		A[i] = h;
+%	}
+%
+%	double **B = new double*[n+1];
+%	for(int i = 0; i < n+1; i++)
+%	{
+%		B[i] = new double [n+1];
+%	}
+%	double *c = new double[n+1];
+%	double *y = new double[n+1]; //for the answer
+%
+%	//composing Fredholm Linear System
+%	for(int i = 0; i < n+1; i++)
+%	{
+%		for(int j = 0; j < n+1; j++)
+%		{
+%			if (i != j)
+%				B[i][j] = -lambda*A[j]*K(a+h*i, a+h*j);
+%			else
+%				B[i][j] = 1 - lambda*A[j]*K(a+h*i, a+h*j);
+%		}
+%		c[i] = f(a+h*i);
+%	}
+%
+%	//solving the system
+%	GaussianElimination (y, B, c, n+1);
+%
+%	double functionMeaning;
+%
+%	cout<<"Approximate u(x) is:"<<endl;
+%	cout<<"u(x)=f(x)+lambda*";
+%	for(int i = 0; i < n; i++)
+%	{
+%		cout<<A[i]<<"*K(x,"<<a+h*i<<")*"<<y[i]<<"+ ";
+%	}
+%	cout<<endl;
+%
+%	cout<<"Function meanings on the nodes:"<<endl;
+%	for(int i = 0; i < n; i++)
+%	{
+%		functionMeaning = f(a+h*i);
+%		for(int j = 0; j < n+1; j++)
+%		{
+%			functionMeaning += lambda*A[j]*K(a+h*i, a+h*j)*y[j];
+%		}
+%		cout<<a+h*i<<" "<<functionMeaning<<endl<<endl;
+%	}
+%	cout<<endl;
+%
+%	//composing the function meaning
+%	functionMeaning = f(x);
+%	for(int i = 0; i < n+1; i++)
+%	{
+%		functionMeaning += lambda*A[i]*K(x, a+h*i)*y[i];
+%	}
+%
+%	delete [] A;
+%	for(int i = 0; i < n+1; i++)
+%	{
+%		delete [] B[i];
+%	}
+%	delete [] B;
+%	delete [] c;
+%	delete [] y;
+%
+%	return functionMeaning;
+%}
+%
+%double MMKFredholmSimpson(double x)
+%{
+%	//number of nodes
+%	int n = 10;
+%	//equation input
+%	double a = 0;
+%	double b = M_PI;
+%	double lambda = 0.25;
+%	double (*f)(double) = f_Fredholm;
+%	double (*K)(double, double) = K_Fredholm;
+%
+%	//coefficients for Simpson SF
+%	double h = (a+b)/n;
+%	double *A = new double[n+1];
+%	A[0] = A[n] = h/3;
+%	for (int i = 1; i < n; i++) //from second to the pre-last
+%	{
+%		if (i%2 == 0)
+%			A[i] = 2*h/3;
+%		else
+%			A[i] = 4*h/3;
+%	}
+%
+%	double **B = new double*[n+1];
+%	for(int i = 0; i < n+1; i++)
+%	{
+%		B[i] = new double [n+1];
+%	}
+%	double *c = new double[n+1];
+%	double *y = new double[n+1]; //for the answer
+%
+%	//composing Fredholm Linear System
+%	for(int i = 0; i < n+1; i++)
+%	{
+%		for(int j = 0; j < n+1; j++)
+%		{
+%			if (i != j)
+%				B[i][j] = -lambda*A[j]*K(a+h*i, a+h*j);
+%			else
+%				B[i][j] = 1 - lambda*A[j]*K(a+h*i, a+h*j);
+%		}
+%		c[i] = f(a+h*i);
+%	}
+%
+%	//solving the system
+%	GaussianElimination (y, B, c, n+1);
+%
+%	cout<<"Approximate u(x) is:"<<endl;
+%	cout<<"u(x)=f(x)+lambda*";
+%	for(int i = 0; i < n; i++)
+%	{
+%		cout<<A[i]<<"*K(x,"<<a+h*i<<")*"<<y[i]<<"+ ";
+%	}
+%	cout<<endl;
+%
+%	double functionMeaning;
+%
+%	cout<<"Function meanings on the nodes:"<<endl;
+%	for(int i = 0; i < n; i++)
+%	{
+%		functionMeaning = f(a+h*i);
+%		for(int j = 0; j < n+1; j++)
+%		{
+%			functionMeaning += lambda*A[j]*K(a+h*i, a+h*j)*y[j];
+%		}
+%		cout<<a+h*i<<" "<<functionMeaning<<endl<<endl;
+%	}
+%	cout<<endl;
+%
+%	//composing the function meaning
+%	functionMeaning = f(x);
+%	for(int i = 0; i < n+1; i++)
+%	{
+%		functionMeaning += lambda*A[i]*K(x, a+h*i)*y[i];
+%	}
+%
+%	delete [] A;
+%	for(int i = 0; i < n+1; i++)
+%	{
+%		delete [] B[i];
+%	}
+%	delete [] B;
+%	delete [] c;
+%	delete [] y;
+%
+%	return functionMeaning;
+%}
+%
+%double alpha0 (double x)
+%{
+%	return ((x - M_PI/3)*(x - 2*M_PI/3)*(x - M_PI))/((0 - M_PI/3)*(0 - 2*M_PI/3)*(0 - M_PI));
+%}
+%
+%double alpha1 (double x)
+%{
+%	return ((x)*(x - 2*M_PI/3)*(x - M_PI))/((M_PI/3)*(M_PI/3 - 2*M_PI/3)*(M_PI/3 - M_PI));
+%}
+%
+%double alpha2 (double x)
+%{
+%	return ((x)*(x - M_PI/3)*(x - M_PI))/((2*M_PI/3)*(2*M_PI/3 - M_PI/3)*(2*M_PI/3 - M_PI));
+%}
+%
+%double alpha3 (double x)
+%{
+%	return ((x)*(x - M_PI/3)*(x - 2*M_PI/3))/((M_PI)*(M_PI - M_PI/3)*(M_PI - 2*M_PI/3));
+%}
+%
+%double DegenerateKernelFredholm(double x)
+%{
+%	//number of nodes
+%	int n = 10;
+%	//equation input
+%	double a = 0;
+%	double end = M_PI;
+%	double lambda = 0.25;
+%	double (*f)(double) = f_Fredholm;
+%
+%	double (*a0)(double) = alpha0;
+%	double (*a1)(double) = alpha1;
+%	double (*a2)(double) = alpha2;
+%	double (*a3)(double) = alpha3;
+%
+%	double h = (a+end)/n;
+%
+%	double **A = new double*[4];
+%	for(int i = 0; i < 4; i++)
+%	{
+%		A[i] = new double[4];
+%	}
+%
+%	A[0][0]=0.; A[0][1]=0.; A[0][2]=0.; A[0][3]=0.;
+%	A[1][0]=0.0249107; A[1][1]=0.0159671; A[1][2]=0.708695; A[1][3]=0.292461;
+%	A[2][0]=-0.0113004; A[2][1]=0.569942; A[2][2]=0.733566; A[2][3]=-0.180571;
+%	A[3][0]=0.0403108; A[3][1]=0.702038; A[3][2]=-0.112338; A[3][3]=0.155404;
+%	double *b = new double[4];
+%	b[0]=0.;
+%	b[1]=15.9218;
+%	b[2]=6.14681;
+%	b[3]=6.42797;
+%	double *y = new double[4];
+%
+%	for(int i = 0; i < 4; i++)
+%	{
+%		A[i][i]=1-lambda*A[i][i];
+%	}
+%
+%	//solving the system
+%	GaussianElimination (y, A, b, 4);
+%
+%	double functionMeaning;
+%
+%	cout<<"Function meanings on the nodes:"<<endl;
+%	for(int i = 0; i < n; i++)
+%	{
+%		functionMeaning = f(a+h*i)+lambda*(y[0]*a0(a+h*i)+y[1]*a1(a+h*i)+y[2]*a2(a+h*i)+y[3]*a3(a+h*i));
+%		cout<<a+h*i<<" "<<functionMeaning<<endl<<endl;
+%	}
+%	cout<<endl;
+%
+%	//composing the function meaning
+%	functionMeaning = f(x)+lambda*(y[0]*a0(x)+y[1]*a1(x)+y[2]*a2(x)+y[3]*a3(x));
+%
+%	for(int i = 0; i < n+1; i++)
+%	{
+%		delete [] A[i];
+%	}
+%	delete [] A;
+%	delete [] b;
+%	delete [] y;
+%
+%	return functionMeaning;
+%}
+%
+%double MMKVolterrTrapeze(double x)
+%{
+%	//number of nodes
+%	int n = 10;
+%	//equation input
+%	double a = 0;
+%	double b = 1;
+%	double lambda = 1;
+%	double (*f)(double) = f_Volterr;
+%	double (*K)(double, double) = K_Volterr;
+%
+%	//coefficients for Trapeze SF
+%	double h = (a+b)/n;
+%	double *A = new double[n+1];
+%	A[0] = A[n] = h/2;
+%	for (int i = 1; i < n; i++) //from second to the pre-last
+%	{
+%		A[i] = h;
+%	}
+%
+%	double **B = new double*[n+1];
+%	for(int i = 0; i < n+1; i++)
+%	{
+%		B[i] = new double [n+1];
+%	}
+%	double *c = new double[n+1];
+%	double *y = new double[n+1]; //for the answer
+%
+%	//composing Volterr Linear System
+%	for(int i = 0; i < n+1; i++)
+%	{
+%		for(int j = 0; j <= i; j++)
+%		{
+%			if (i != j)
+%				B[i][j] = -lambda*A[j]*K(a+h*i, a+h*j);
+%			else
+%				B[i][j] = 1 - lambda*A[j]*K(a+h*i, a+h*j);
+%		}
+%		c[i] = f(a+h*i);
+%	}
+%
+%	//solving the system
+%	lowerTriangularGaussianElimination (y, B, c, n+1);
+%
+%	//composing the function meaning
+%	double functionMeaning = f(x);
+%	for(int i = 0; i < n+1; i++)
+%	{
+%		functionMeaning += lambda*A[i]*K(x, a+h*i)*y[i];
+%	}
+%
+%	cout<<"Approximate u(x) is:"<<endl;
+%	cout<<"u(x)=f(x)+lambda*";
+%	for(int i = 0; i < n; i++)
+%	{
+%		cout<<A[i]<<"*K(x,"<<a+h*i<<")*"<<y[i]<<"+ ";
+%	}
+%	cout<<endl;
+%
+%	cout<<"Function meanings on the nodes:"<<endl;
+%	for(int i = 0; i < n; i++)
+%	{
+%		functionMeaning = f(a+h*i);
+%		for(int j = 0; j < n+1; j++)
+%		{
+%			functionMeaning += lambda*A[j]*K(a+h*i, a+h*j)*y[j];
+%		}
+%		cout<<a+h*i<<" "<<functionMeaning<<endl<<endl;
+%	}
+%	cout<<endl;
+%
+%	delete [] A;
+%	for(int i = 0; i < n+1; i++)
+%	{
+%		delete [] B[i];
+%	}
+%	delete [] B;
+%	delete [] c;
+%	delete [] y;
+%
+%	return functionMeaning;
+%}
+%
+%int main(void)
+%{
+%	double x;
+%
+%	for (x = 0; x <= M_PI; x += M_PI/100)
+%		cout<<MMKFredholmTrapeze(x)<<endl;
+%
+%	for (x = 0; x <= M_PI; x += M_PI/100)
+%		cout<<MMKFredholmSimpson(x)<<endl;
+%
+%	for (x = 0; x <= M_PI; x += M_PI/100)
+%		cout<<DegenerateKernelFredholm(x)<<endl;
+%
+%	for (x = 0; x <= 1; x += 0.01)
+%		cout<<MMKVolterrTrapeze(0)<<endl;
+%
+%	return 0;
+%}
+%\end{verbatim}
+
+\end{document}
