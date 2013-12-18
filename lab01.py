@@ -69,11 +69,11 @@ for j in range(M):
     y[0][j+1] = (h*(beta_1(tau*(j+1))-h/2*phi[0][j+1]-h/(2*tau)*y[0][j])-y[1][j+1])/(-1-alpha_1*h-h**2/(2*tau))
     y[N][j+1] = y[N-1][j+1] + h*(alpha_2*y[N-1][j+1]+beta_2(tau*(j+1))+h/2*(phi[N-1][j+1]-1/tau*(y[N-1][j+1]-y[N-1][j])))
 
-# for j in range(M+1):
-    # for i in range(N+1):
-        # print(y[i][j])
-        # print(u(h*i,tau*j))
-    # print("\n")
+for j in range(M+1):
+    for i in range(N+1):
+        print(y[i][j])
+        print(u(h*i,tau*j))
+    print("\n")
 
 # sigma = 1/2, неявная схема
 
@@ -118,11 +118,11 @@ for j in range(M):
     for i in range(N+1):
         y[i][j+1] = pr[i]
 
-# for j in range(M+1):
-    # for i in range(N+1):
-        # print(y[i][j])
-        # print(u(h*i,tau*j))
-    # print("\n")
+for j in range(M+1):
+    for i in range(N+1):
+        print(y[i][j])
+        print(u(h*i,tau*j))
+    print("\n")
 
 # sigma = 1, полностью неявная схема
 
@@ -167,8 +167,8 @@ for j in range(M):
     for i in range(N+1):
         y[i][j+1] = pr[i]
 
-# for j in range(M+1):
-    # for i in range(N+1):
-        # print(y[i][j])
-        # print(u(h*i,tau*j))
-    # print("\n")
+for j in range(M+1):
+    for i in range(N+1):
+        print(y[i][j])
+        print(u(h*i,tau*j))
+    print("\n")

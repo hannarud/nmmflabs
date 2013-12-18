@@ -42,7 +42,7 @@ def u_1(x):
 # Параметры третьей краевой задачи на обеих границах
 alpha_1 = 2
 def beta_1(t):
-    return -1-t**2
+    return 1+t**2
 
 alpha_2 = -1
 def beta_2(t):
@@ -83,100 +83,112 @@ for j in range(M+1):
         print(u(h*i,tau*j))
     print("\n")
 
-# # sigma = 1/2, неявная схема
+# sigma = 1/2, неявная схема
 
-# # Параметры сетки
-# h = 0.25
-# tau = 0.05
-# N = int(L/h)
-# M = int(T/tau)
+# Параметры сетки
+h = 0.1
+tau = 0.1
+N = int(L/h)
+M = int(T/tau)
 
-# # Задаем нужные функции на сетке
-# phi = [[f(h*i, tau*j) for j in range(M+1)] for i in range(N+1)]
-# y = [[0 for j in range(M+1)] for i in range(N+1)]
+# Задаем нужные функции на сетке
+phi = [[f(h*i, tau*j) for j in range(M+1)] for i in range(N+1)]
+y = [[0 for j in range(M+1)] for i in range(N+1)]
 
-# # Инициализируем нулевой слой
-# for i in range(N+1):
-    # y[i][0] = u_0(h*i)
+# Инициализируем нулевой слой
+for i in range(N+1):
+    y[i][0] = u_0(h*i)
 
-# # Решение систем методом прогонки для каждого j+1
-# for j in range(M):
-    # # Готовим систему для метода прогонки
-    # c = [0 for i in range(N+1)]
-    # a = [0 for i in range(N+1)]
-    # b = [0 for i in range(N+1)]
-    # d = [0 for i in range(N+1)]
-    # a[0] = 0
-    # c[0] = -1/h-alpha_1-h/(2*tau)
-    # b[0] = -1/h
-    # d[0] = beta_1(tau*(j+1))-h/2*phi[0][j+1]-h/(2*tau)*y[0][j]
-    # for i in range(1,N):
-        # a[i] = 1/(2*h**2)
-        # c[i] = 1/tau+1/(h**2)
-        # b[i] = 1/(2*h**2)
-        # d[i] = y[i][j]/tau+(y[i+1][j]-2*y[i][j]+y[i-1][j])/(2*h**2)+phi[i][j]
-    # a[N] = 1/h+alpha_2-h/(2*tau)
-    # c[N] = 1/h
-    # b[N] = 0
-    # d[N] = beta_2(tau*(j+1))+h/2*phi[N-1][j+1]+h/(2*tau)*y[N-1][j]
-    # # Решаем систему методом прогонки
-    # # Тут что-то не так с индексацией, приходится делать финт
-    # pr = [0 for i in range(N+1)]
-    # progonka(N+1,c,a,b,d,pr)
-    # for i in range(N+1):
-        # y[i][j+1] = pr[i]
+# Инициализируем первый слой
+for i in range(N+1):
+    y[i][1] = tau*u_1(h*i)+y[i][0]
 
-# # for j in range(M+1):
-    # # for i in range(N+1):
-        # # print(y[i][j])
-        # # print(u(h*i,tau*j))
-    # # print("\n")
+# Решение систем методом прогонки для каждого j+1
+for j in range(1,M):
+    # Готовим систему для метода прогонки
+    c = [0 for i in range(N+1)]
+    a = [0 for i in range(N+1)]
+    b = [0 for i in range(N+1)]
+    d = [0 for i in range(N+1)]
+    a[0] = 0
+    c[0] = -1/h-alpha_1-h/(2*tau**2)
+    b[0] = -1/h
+    d[0] = beta_1(tau*(j+1))-h/2*phi[0][j+1]-h/(2*tau**2)*(-2*y[0][j]+y[0][j-1])
+    for i in range(1,N):
+        a[i] = 1/(2*h**2)
+        c[i] = 1/(tau**2)+1/(h**2)
+        b[i] = 1/(2*h**2)
+        d[i] = (2*y[i][j]-y[i][j-1])/(tau**2)+(y[i+1][j-1]-2*y[i][j-1]+y[i-1][j-1])/(2*h**2)+phi[i][j]
+    a[N] = 1/h+alpha_2-h/(2*tau**2)
+    c[N] = 1/h
+    b[N] = 0
+    d[N] = beta_2(tau*(j+1))+h/2*phi[N-1][j+1]+h/(2*tau**2)*(2*y[N-1][j]-y[N-1][j-1])
+    # Решаем систему методом прогонки
+    # Тут что-то не так с индексацией, приходится делать финт
+    pr = [0 for i in range(N+1)]
+    progonka(N+1,c,a,b,d,pr)
+    for i in range(N+1):
+        y[i][j+1] = pr[i]
+    
+# Получаестя плохая аппроксимаця левого граничного условия, остальное хорошо
 
-# # sigma = 1, полностью неявная схема
+for j in range(M+1):
+    for i in range(N+1):
+        print(y[i][j])
+        print(u(h*i,tau*j))
+    print("\n")
 
-# # Параметры сетки
-# h = 0.1
-# tau = 0.1
-# N = int(L/h)
-# M = int(T/tau)
+# sigma = 1, полностью неявная схема
 
-# # Задаем нужные функции на сетке
-# phi = [[f(h*i,tau*j) for j in range(M+1)] for i in range(N+1)]
-# y = [[0 for j in range(M+1)] for i in range(N+1)]
+# Параметры сетки
+h = 0.1
+tau = 0.1
+N = int(L/h)
+M = int(T/tau)
 
-# # Инициализируем нулевой слой
-# for i in range(N+1):
-    # y[i][0] = u_0(h*i)
+# Задаем нужные функции на сетке
+phi = [[f(h*i, tau*j) for j in range(M+1)] for i in range(N+1)]
+y = [[0 for j in range(M+1)] for i in range(N+1)]
 
-# # Решение систем методом прогонки для каждого j+1
-# for j in range(M):
-    # # Готовим систему для метода прогонки
-    # c = [0 for i in range(N+1)]
-    # a = [0 for i in range(N+1)]
-    # b = [0 for i in range(N+1)]
-    # d = [0 for i in range(N+1)]
-    # a[0] = 0
-    # c[0] = -1/h-alpha_1-h/(2*tau)
-    # b[0] = -1/h
-    # d[0] = beta_1(tau*(j+1))-h/2*phi[0][j+1]-h/(2*tau)*y[0][j]
-    # for i in range(1,N):
-        # a[i] = 1/(h**2)
-        # c[i] = 1/tau+2/(h**2)
-        # b[i] = 1/(h**2)
-        # d[i] = y[i][j]/tau+phi[i][j]
-    # a[N] = 1/h+alpha_2-h/(2*tau)
-    # c[N] = 1/h
-    # b[N] = 0
-    # d[N] = beta_2(tau*(j+1))+h/2*phi[N-1][j+1]+h/(2*tau)*y[N-1][j]
-    # # Решаем систему методом прогонки
-    # # Тут что-то не так с индексацией, приходится делать финт
-    # pr = [0 for i in range(N+1)]
-    # progonka(N+1,c,a,b,d,pr)
-    # for i in range(N+1):
-        # y[i][j+1] = pr[i]
+# Инициализируем нулевой слой
+for i in range(N+1):
+    y[i][0] = u_0(h*i)
 
-# # for j in range(M+1):
-    # # for i in range(N+1):
-        # # print(y[i][j])
-        # # print(u(h*i,tau*j))
-    # # print("\n")
+# Инициализируем первый слой
+for i in range(N+1):
+    y[i][1] = tau*u_1(h*i)+y[i][0]
+
+# Решение систем методом прогонки для каждого j+1
+for j in range(1,M):
+    # Готовим систему для метода прогонки
+    c = [0 for i in range(N+1)]
+    a = [0 for i in range(N+1)]
+    b = [0 for i in range(N+1)]
+    d = [0 for i in range(N+1)]
+    a[0] = 0
+    c[0] = -1/h-alpha_1-h/(2*tau**2)
+    b[0] = -1/h
+    d[0] = beta_1(tau*(j+1))-h/2*phi[0][j+1]-h/(2*tau**2)*(-2*y[0][j]+y[0][j-1])
+    for i in range(1,N):
+        a[i] = 1/(h**2)
+        c[i] = 1/(tau**2)+2/(h**2)
+        b[i] = 1/(h**2)
+        d[i] = (2*y[i][j]-y[i][j-1])/(tau**2)+(-y[i+1][j]+2*y[i][j]-y[i-1][j]+y[i+1][j-1]-2*y[i][j-1]+y[i-1][j-1])/(h**2)+phi[i][j]
+    a[N] = 1/h+alpha_2-h/(2*tau**2)
+    c[N] = 1/h
+    b[N] = 0
+    d[N] = beta_2(tau*(j+1))+h/2*phi[N-1][j+1]+h/(2*tau**2)*(2*y[N-1][j]-y[N-1][j-1])
+    # Решаем систему методом прогонки
+    # Тут что-то не так с индексацией, приходится делать финт
+    pr = [0 for i in range(N+1)]
+    progonka(N+1,c,a,b,d,pr)
+    for i in range(N+1):
+        y[i][j+1] = pr[i]
+
+# Получаестя плохая аппроксимаця левого граничного условия, остальное хорошо
+
+for j in range(M+1):
+    for i in range(N+1):
+        print(y[i][j])
+        print(u(h*i,tau*j))
+    print("\n")
